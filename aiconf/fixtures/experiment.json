@@ -32,10 +32,10 @@
     },
     "trainer": {
       "num_epochs": 40,
-      "patience": 10,
+      "patience": 40,
       "cuda_device": -1,
       "grad_clipping": 5.0,
-      "validation_metric": "+acc1",
+      "validation_metric": "+acc",
       "optimizer": {
         "type": "adagrad"
       }

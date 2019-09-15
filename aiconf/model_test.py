@@ -18,12 +18,15 @@ class PaperModelTest(ModelTestCase):
     def setUp(self):
         super().setUp()
 
+        self.set_up_model(FIXTURES_ROOT / 'experiment.json', FIXTURES_ROOT / 'tiny.csv')
+
         # 1. call self.set_up_model with the path to the experiment config
         #    and the path to the test fixture
 
     def test_simple_tagger_can_train_save_and_load(self):
-        # self.ensure_model_can_train_save_and_load(self.param_file)
-        pass
+        # Doesn't work on Windows: 
+        # "PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: ..."
+        self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_forward_pass_runs_correctly(self):
         # feel free to add extra tests here
