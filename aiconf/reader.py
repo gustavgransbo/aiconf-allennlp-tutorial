@@ -25,7 +25,13 @@ class BBCReader(DatasetReader):
         3. create a LabelField for the category (if provided)
         4. return an Instance
         """
-        return Instance(fields={})
+        tokens = self.tokenizer.tokenize(text)
+
+        fields = {'text': TextField(tokens, self.token_indexers)}
+        if category is not None:
+            fields['category'] = LabelField(category)
+        
+        return Instance(fields)
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -35,4 +41,8 @@ class BBCReader(DatasetReader):
         2. pass the fields to text_to_instance
         3. yield the instances
         """
-        yield Instance({})
+
+        with open(file_path, newline='') as f:
+            csv_reader = csv.reader(f)
+            for category, text in csv_reader:
+                yield self.text_to_instance(text, category)
