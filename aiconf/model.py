@@ -12,55 +12,45 @@ import torch
 @Model.register("bbc")
 class BBCModel(Model):
     def __init__(self,
-                 vocab: Vocabulary) -> None:
+                 vocab: Vocabulary,
+                 text_field_embedder: TextFieldEmbedder,
+                 encoder: Seq2VecEncoder) -> None:
         super().__init__(vocab)
 
-        # 1. We want the constructor to accept a TextFieldEmbedder
-        # and we need to save it as a class variable.
+        self.vocab = vocab
 
-        # 2. We want the constructor to accept a Seq2VecEncoder
-        # and we need to save it as a class variable
+        self.text_field_embedder = text_field_embedder
+        self.encoder = encoder
 
-        # 3. We need to construct the final linear layer, it should have
-        #   in_features = the output dimension of the Seq2VecEncoder
-        #   out_features = the number of classes we're predicting
-        # We can get the latter from the "labels" namespace of the vocabulary
+        n_classes = vocab.get_vocab_size("labels")
+        self.linear = torch.nn.Linear(encoder.get_output_dim(), n_classes)
 
-        # 4. We also need to instantiate a loss function for our model.
-        # Here we'll just use PyTorch's built in cross-entropy loss
-        # https://pytorch.org/docs/stable/nn.html#crossentropyloss
+        self.loss = torch.nn.CrossEntropyLoss()
+        self.metrics = {
+            'acc' : CategoricalAccuracy()
+        }
 
-        # 5. Finally, we want to track some metrics as we train, at the very
-        # least, categorical accuracy:
-        # https://allenai.github.io/allennlp-docs/api/allennlp.training.metrics.html#categorical-accuracy
-        # store them in a dictionary so that `self.get_metrics` works correctly.
+    def forward(self, 
+        text: Dict[str, torch.tensor],
+        category: Optional[torch.tensor] = None) -> Dict[str, torch.Tensor]:
 
+        embedded_text = self.text_field_embedder(text)
 
-    def forward(self) -> Dict[str, torch.Tensor]:
-        # Our forward function needs to take arguments that correspond
-        # to the fields of our instance.
+        mask = get_text_field_mask(text)
+        encoded_text = self.encoder(embedded_text, mask)
 
-        # 1. In this case we'll always have a "text" input
+        logits = self.linear(encoded_text)
 
-        # 2. and we'll sometimes have a "category" input
-        #    (so it should have a None default value for when we're doing inference)
+        output = {
+            'logits': logits
+        }
 
-        # 3. our first step should be to apply our TextFieldEmbedder to the text input
+        if category is not None:
+            output['loss'] = self.loss(logits, category)
+            for metric in self.metrics.values():
+                metric(logits, category)
 
-        # 4. then we should apply our Seq2VecEncoder to the embedded text
-        #    We'll need to provide a _mask_ which we can get from util.get_text_field_mask
-
-        # 5. we can then apply apply our linear layer to the encoded text to get
-        #    the logits corresponding to the predicted class probabilities
-
-        # 6. our outputs need to be in a dict, so create one that contains the logits
-
-        # 7. then, only if a `category` was provided,
-        # 7a. compute the loss and add it to the output
-        # 7b. update all the metrics
-
-        # 8. finally, return the output
-        return {}
+        return output
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {name: metric.get_metric(reset)
